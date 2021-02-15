@@ -1,0 +1,1 @@
+# attendanceboard-fr-extension
