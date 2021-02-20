@@ -1,0 +1,5 @@
+# created by virtualenv automatically
+.venv
+train-dump.yml
+src/images/*
+!src/images/.gitkeep
