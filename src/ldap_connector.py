@@ -1,30 +1,29 @@
 import json
-
 import requests
 import stomper
+
 from requests.auth import HTTPBasicAuth
 from websocket import create_connection, WebSocketConnectionClosedException
 
 from models.person import Person
 
 
-class Connector:
+class LDAPConnector:
     last_interacting_person = None
-    available_image_ids = []
+    persons = []
 
     def __init__(self):
-        self.build_available_image_ids()
+        self.build_persons()
 
-    def build_available_image_ids(self):
+    def build_persons(self):
         response = requests.get('http://localhost:8080/attendanceBoard/board/persons',
                                 auth=HTTPBasicAuth('attendanceboard', 'attendanceboard20'))
         payload = json.loads(response.text)
 
-        self.available_image_ids.clear()
+        self.persons.clear()
         for person in payload:
             person = Person(json.dumps(person))
-            if person.imagePresent:
-                self.available_image_ids.append(person.objectGUID)
+            self.persons.append(person)
 
     def subscribe_person_update(self):
         try:
@@ -49,3 +48,10 @@ class Connector:
 
         except ConnectionRefusedError:
             self.subscribe_person_update()
+
+    @staticmethod
+    def set_absent(id_):
+        ws = create_connection('ws://localhost:8080/attendanceBoard/websocket/none-sockjs')
+        ws.send('CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n')
+        msg = stomper.send('/app/set-absent', id_)
+        ws.send(msg)

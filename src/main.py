@@ -1,13 +1,13 @@
 import threading
 
-from connector import Connector
+from ldap_connector import LDAPConnector
 from input_handler import InputHandler
+from trainer import Trainer
 
 print('Starting facial recognition extension \n')
 
-connector = Connector()
-listener_thread = threading.Thread(target=connector.subscribe_person_update)
-listener_thread.start()
+trainer = Trainer()
+trainer.train()
 
 input_handler = InputHandler()
 input_handler.start()
