@@ -1,6 +1,3 @@
-import threading
-
-from ldap_connector import LDAPConnector
 from input_handler import InputHandler
 from trainer import Trainer
 

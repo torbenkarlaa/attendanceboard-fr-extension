@@ -55,3 +55,10 @@ class LDAPConnector:
         ws.send('CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n')
         msg = stomper.send('/app/set-absent', id_)
         ws.send(msg)
+
+    @staticmethod
+    def set_present(id_):
+        ws = create_connection('ws://localhost:8080/attendanceBoard/websocket/none-sockjs')
+        ws.send('CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n')
+        msg = stomper.send('/app/set-present', id_)
+        ws.send(msg)

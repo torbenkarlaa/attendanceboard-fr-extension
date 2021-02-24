@@ -38,7 +38,7 @@ class InputHandler:
                 id_, conf = recognizer.predict(roi)
                 p_id = ldap_connector.persons[id_].id
 
-                if conf <= 40:
+                if conf <= 10:
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     text_width = cv2.getTextSize(p_id, font, 1, 2)[0][0]
                     offset = int((w - text_width) / 2)
@@ -46,9 +46,13 @@ class InputHandler:
                     cv2.putText(frame, p_id, (x + offset, y - 10), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
                     if id_ != self.last_predict:
-                        print('Recognized ' + p_id + 'and changing present state')
+                        print('Recognized ' + p_id + ' - changing present state')
                         self.last_predict = id_
-                        LDAPConnector.set_absent(p_id)
+
+                        if ldap_connector.persons[id_].present:
+                            LDAPConnector.set_absent(p_id)
+                        else:
+                            LDAPConnector.set_present(p_id)
 
                 elif ldap_connector.last_interacting_person is not None:
                     print('Persisting sample data for ' + p_id)
