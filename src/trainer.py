@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 from bson import Binary
 
-from ldap_connector import LDAPConnector
+from an_connector import ANConnector
 from database_connector import DatabaseConnector
 
 BASE_URL = 'http://localhost:8080/attendanceBoard/person-images/'
@@ -14,9 +14,8 @@ BASE_URL = 'http://localhost:8080/attendanceBoard/person-images/'
 
 class Trainer:
     FACE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
-    SCALE_SIZE = (500, 500)
 
-    ldap_connector = LDAPConnector()
+    an_connector = ANConnector()
     database_connector = DatabaseConnector()
 
     def train(self):
@@ -28,18 +27,18 @@ class Trainer:
 
         self.insert_base_images()
 
-        for person in self.ldap_connector.persons:
+        for person in self.an_connector.persons:
             for entry in self.database_connector.get(person.objectGUID):
                 arr = Trainer.bin_to_np_arr(entry['data'])
                 data_arr.append(arr)
-                id_arr.append(self.ldap_connector.persons.index(person))
+                id_arr.append(self.an_connector.persons.index(person))
 
         recognizer.train(data_arr, np.array(id_arr))
         recognizer.save('train-dump.yml')
         print('Training finished \n')
 
     def insert_base_images(self):
-        for person in self.ldap_connector.persons:
+        for person in self.an_connector.persons:
             if person.imagePresent and self.database_connector.count(person.objectGUID) == 0:
                 image = Image.open(urllib.request.urlopen(BASE_URL + person.objectGUID + '.jpg'))
                 binary = Trainer.img_to_bin(image)

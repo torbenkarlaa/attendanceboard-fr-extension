@@ -4,13 +4,13 @@ import threading
 import cv2
 from bson import Binary
 
-from ldap_connector import LDAPConnector
+from an_connector import ANConnector
 from database_connector import DatabaseConnector
 from trainer import Trainer
 
-ldap_connector = LDAPConnector()
+an_connector = ANConnector()
 database_connector = DatabaseConnector()
-listener_thread = threading.Thread(target=ldap_connector.subscribe_person_update)
+listener_thread = threading.Thread(target=an_connector.subscribe_person_update)
 
 
 class InputHandler:
@@ -36,7 +36,7 @@ class InputHandler:
             for (x, y, w, h) in faces:
                 roi = image[y: y + h, x: x + w]
                 id_, conf = recognizer.predict(roi)
-                p_id = ldap_connector.persons[id_].id
+                p_id = an_connector.persons[id_].id
 
                 if conf <= 10:
                     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -49,19 +49,19 @@ class InputHandler:
                         print('Recognized ' + p_id + ' - changing present state')
                         self.last_predict = id_
 
-                        if ldap_connector.persons[id_].present:
-                            LDAPConnector.set_absent(p_id)
+                        if an_connector.persons[id_].present:
+                            ANConnector.set_absent(p_id)
                         else:
-                            LDAPConnector.set_present(p_id)
+                            ANConnector.set_present(p_id)
 
-                elif ldap_connector.last_interacting_person is not None:
+                elif an_connector.last_interacting_person is not None:
                     print('Persisting sample data for ' + p_id)
 
                     binary = Binary(pickle.dumps(roi, protocol=2), subtype=128)
                     database_connector.insert(
-                        {'guid': ldap_connector.last_interacting_person.objectGUID, 'data': binary})
+                        {'guid': an_connector.last_interacting_person.objectGUID, 'data': binary})
 
-                    ldap_connector.last_interacting_person = None
+                    an_connector.last_interacting_person = None
 
                 cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 

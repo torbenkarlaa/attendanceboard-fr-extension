@@ -8,7 +8,10 @@ from websocket import create_connection, WebSocketConnectionClosedException
 from models.person import Person
 
 
-class LDAPConnector:
+class ANConnector:
+    CONNECTION_ENDPOINT = 'ws://localhost:8080/attendanceBoard/websocket/none-sockjs'
+    WS_HEADER = 'CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n'
+
     last_interacting_person = None
     persons = []
 
@@ -27,8 +30,8 @@ class LDAPConnector:
 
     def subscribe_person_update(self):
         try:
-            ws = create_connection('ws://localhost:8080/attendanceBoard/websocket/none-sockjs')
-            ws.send('CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n')
+            ws = create_connection(self.CONNECTION_ENDPOINT)
+            ws.send(self.WS_HEADER)
             sub = stomper.subscribe('/topic/person-update', 1)
             ws.send(sub)
 
@@ -51,14 +54,14 @@ class LDAPConnector:
 
     @staticmethod
     def set_absent(id_):
-        ws = create_connection('ws://localhost:8080/attendanceBoard/websocket/none-sockjs')
-        ws.send('CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n')
+        ws = create_connection(ANConnector.CONNECTION_ENDPOINT)
+        ws.send(ANConnector.WS_HEADER)
         msg = stomper.send('/app/set-absent', id_)
         ws.send(msg)
 
     @staticmethod
     def set_present(id_):
-        ws = create_connection('ws://localhost:8080/attendanceBoard/websocket/none-sockjs')
-        ws.send('CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n')
+        ws = create_connection(ANConnector.CONNECTION_ENDPOINT)
+        ws.send(ANConnector.WS_HEADER)
         msg = stomper.send('/app/set-present', id_)
         ws.send(msg)
