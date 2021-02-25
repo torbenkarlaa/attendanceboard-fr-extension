@@ -13,5 +13,5 @@ class Person(object):
     firstAider: bool
     alarmArea: str
 
-    def __init__(self, j):
-        self.__dict__ = json.loads(j)
+    def __init__(self, json_string):
+        self.__dict__ = json.loads(json_string)

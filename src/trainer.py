@@ -1,19 +1,21 @@
 import pickle
 import urllib.request
+
 import cv2
 import numpy as np
-
+import yaml
 from PIL import Image
 from bson import Binary
 
 from an_connector import ANConnector
 from database_connector import DatabaseConnector
 
-BASE_URL = 'http://localhost:8080/attendanceBoard/person-images/'
+config = yaml.load(open('config.yml'), Loader=yaml.FullLoader).get('attendanceboard')
 
 
 class Trainer:
     FACE_CASCADE = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
+    DATA_FILE = 'train-dump.yml'
 
     an_connector = ANConnector()
     database_connector = DatabaseConnector()
@@ -34,13 +36,14 @@ class Trainer:
                 id_arr.append(self.an_connector.persons.index(person))
 
         recognizer.train(data_arr, np.array(id_arr))
-        recognizer.save('train-dump.yml')
+        recognizer.save(self.DATA_FILE)
         print('Training finished \n')
 
     def insert_base_images(self):
         for person in self.an_connector.persons:
             if person.imagePresent and self.database_connector.count(person.objectGUID) == 0:
-                image = Image.open(urllib.request.urlopen(BASE_URL + person.objectGUID + '.jpg'))
+                url = config.get('api') + '/person-images/' + person.objectGUID + '.jpg'
+                image = Image.open(urllib.request.urlopen(url))
                 binary = Trainer.img_to_bin(image)
 
                 if binary is not None:

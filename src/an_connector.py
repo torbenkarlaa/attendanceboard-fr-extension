@@ -1,15 +1,17 @@
 import json
+
 import requests
 import stomper
-
+import yaml
 from requests.auth import HTTPBasicAuth
 from websocket import create_connection, WebSocketConnectionClosedException
 
 from models.person import Person
 
+config = yaml.load(open('config.yml'), Loader=yaml.FullLoader).get('attendanceboard')
+
 
 class ANConnector:
-    CONNECTION_ENDPOINT = 'ws://localhost:8080/attendanceBoard/websocket/none-sockjs'
     WS_HEADER = 'CONNECT\naccept-version:1.0,1.1,2.0\n\n\x00\n'
 
     last_interacting_person = None
@@ -19,8 +21,9 @@ class ANConnector:
         self.build_persons()
 
     def build_persons(self):
-        response = requests.get('http://localhost:8080/attendanceBoard/board/persons',
-                                auth=HTTPBasicAuth('attendanceboard', 'attendanceboard20'))
+        response = requests.get(config.get('api') + '/board/persons',
+                                auth=HTTPBasicAuth(config.get('auth').get('username'),
+                                                   config.get('auth').get('password')))
         payload = json.loads(response.text)
 
         self.persons.clear()
@@ -30,7 +33,7 @@ class ANConnector:
 
     def subscribe_person_update(self):
         try:
-            ws = create_connection(self.CONNECTION_ENDPOINT)
+            ws = create_connection(config.get('websocket-endpoint'))
             ws.send(self.WS_HEADER)
             sub = stomper.subscribe('/topic/person-update', 1)
             ws.send(sub)
@@ -54,14 +57,14 @@ class ANConnector:
 
     @staticmethod
     def set_absent(id_):
-        ws = create_connection(ANConnector.CONNECTION_ENDPOINT)
+        ws = create_connection(config.get('websocket-endpoint'))
         ws.send(ANConnector.WS_HEADER)
         msg = stomper.send('/app/set-absent', id_)
         ws.send(msg)
 
     @staticmethod
     def set_present(id_):
-        ws = create_connection(ANConnector.CONNECTION_ENDPOINT)
+        ws = create_connection(config.get('websocket-endpoint'))
         ws.send(ANConnector.WS_HEADER)
         msg = stomper.send('/app/set-present', id_)
         ws.send(msg)

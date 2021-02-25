@@ -1,0 +1,10 @@
+attendanceboard:
+  api: http://localhost:8080/attendanceBoard
+  websocket-endpoint: ws://localhost:8080/attendanceBoard/websocket/none-sockjs
+  auth:
+    username: test
+    password: test
+
+mongo:
+  host: localhost
+  port: 27017

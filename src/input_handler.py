@@ -22,9 +22,10 @@ class InputHandler:
 
     def start(self):
         recognizer = cv2.face.LBPHFaceRecognizer_create()
-        capture = cv2.VideoCapture(2)
+        # Param may need to be changed, depending on your video input
+        capture = cv2.VideoCapture(1)
 
-        recognizer.read('train-dump.yml')
+        recognizer.read(Trainer.DATA_FILE)
 
         print('Watching for video input changes ... \n')
 

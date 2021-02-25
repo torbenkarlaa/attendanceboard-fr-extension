@@ -1,4 +1,7 @@
 import pymongo
+import yaml
+
+config = yaml.load(open('config.yml'), Loader=yaml.FullLoader).get('mongo')
 
 
 class DatabaseConnector:
@@ -7,7 +10,7 @@ class DatabaseConnector:
     collection = None
 
     def __init__(self):
-        self.client = pymongo.MongoClient('localhost', 27017)
+        self.client = pymongo.MongoClient(config.get('host'), config.get('port'))
         self.db = self.client['frExtensionDB']
         self.collection = self.db['sample_data']
 
