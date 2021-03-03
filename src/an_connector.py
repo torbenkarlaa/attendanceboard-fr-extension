@@ -6,6 +6,7 @@ import yaml
 from requests.auth import HTTPBasicAuth
 from websocket import create_connection, WebSocketConnectionClosedException
 
+from assets.messages import Messages
 from models.person import Person
 
 config = yaml.load(open('config.yml'), Loader=yaml.FullLoader).get('attendanceboard')
@@ -38,7 +39,7 @@ class ANConnector:
             sub = stomper.subscribe('/topic/person-update', 1)
             ws.send(sub)
 
-            print('Successfully connected to person-update topic \n')
+            print(Messages.AN_CONNECTOR_CONNECTION_SUCCESSFUL)
 
             while True:
                 try:
@@ -46,9 +47,9 @@ class ANConnector:
                     person = Person(payload)
                     self.last_interacting_person = person
                 except json.decoder.JSONDecodeError:
-                    print('Error while parsing JSON payload \n')
+                    print(Messages.AN_CONNECTOR_PAYLOAD_ERROR)
                 except WebSocketConnectionClosedException:
-                    print('Connection closed, trying to reconnect.. \n')
+                    print(Messages.AN_CONNECTOR_CONNECTION_CLOSED)
                     self.subscribe_person_update()
                     break
 
