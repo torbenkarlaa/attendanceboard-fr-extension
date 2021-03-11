@@ -57,6 +57,12 @@ data are only exemplary and can deviate (strongly), especially the values for th
 on, among other things, the lighting conditions and the orientation of the face. If the detection ratio is high, the
 number of recorded frames automatically decreases, as calculations are still carried out for identification.
 
+### Specs
+
+CPU
+- [Intel i5-8259U @ 2.30 GHz](https://ark.intel.com/content/www/us/en/ark/products/135935/intel-core-i5-8259u-processor-6m-cache-up-to-3-80-ghz.html)  
+Memory - 16 GB 2133 MHz LPDDR3
+
 ### 1920 x 1080 - No frame rescaling
 
 | Scale factor | CPU average | CPU peak | Memory average | Memory peak | Recorded frames | Detection ratio | FPS average | FPS highest | FPS lowest |

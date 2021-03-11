@@ -10,6 +10,7 @@ from database_connector import DatabaseConnector
 from trainer import Trainer
 from utils.average_utility import AverageUtility
 from utils.benchmark_utility import BenchmarkUtility
+from utils.image_utility import ImageUtility
 
 an_connector = ANConnector()
 average_utility = AverageUtility()
@@ -20,7 +21,6 @@ listener_thread = threading.Thread(target=an_connector.subscribe_person_update, 
 
 class InputHandler:
     last_predict = None
-    recognized_faces = {}
     benchmark_mode_activated = False
     frame_rescaling_activated = False
     frame_width = 0
@@ -75,7 +75,7 @@ class InputHandler:
         self.crop_frame(frame)
 
         if self.benchmark_mode_activated:
-            benchmark_utility.scale_factor = Trainer.SCALE_FACTOR
+            benchmark_utility.scale_factor = ImageUtility.SCALE_FACTOR
             benchmark_utility.frame_width = self.frame_width
             benchmark_utility.frame_height = self.frame_height
 
@@ -88,7 +88,8 @@ class InputHandler:
                 image = image[prev_pos_y[0] - frame_offset:prev_pos_y[1] + frame_offset,
                         prev_pos_x[0] - frame_offset:prev_pos_x[1] + frame_offset]
 
-            faces = Trainer.FACE_CASCADE.detectMultiScale(image, scaleFactor=Trainer.SCALE_FACTOR, minNeighbors=5)
+            faces = ImageUtility.FACE_CASCADE.detectMultiScale(image, scaleFactor=ImageUtility.SCALE_FACTOR,
+                                                               minNeighbors=5)
 
             if faces == ():
                 frames_counter += 1
