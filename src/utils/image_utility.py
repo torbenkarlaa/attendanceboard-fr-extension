@@ -3,6 +3,8 @@ import pickle
 import cv2
 import numpy as np
 from bson import Binary
+from keras_preprocessing.image import img_to_array
+from tensorflow.python.keras.applications.mobilenet_v2 import preprocess_input
 
 
 class ImageUtility:
@@ -12,8 +14,8 @@ class ImageUtility:
 
     @staticmethod
     def img_to_bin(image):
-        image = image.convert('L')
-        image_arr = np.array(image, 'uint8')
+        image_grey = image.convert('L')
+        image_arr = np.array(image_grey, 'uint8')
 
         faces = ImageUtility.FACE_CASCADE.detectMultiScale(image_arr, scaleFactor=ImageUtility.SCALE_FACTOR,
                                                            minNeighbors=5)
@@ -21,10 +23,11 @@ class ImageUtility:
         roi = []
 
         for (x, y, w, h) in faces:
-            roi.append(image_arr[y:y + h, x:x + w])
+            roi.append(np.array(image, 'uint8')[y:y + h, x:x + w])
 
             if len(roi) == 1:
                 roi = ImageUtility.resize_roi(image, x, y, w, h)
+                roi = preprocess_input(roi)
                 return Binary(pickle.dumps(roi, protocol=2), subtype=128)
 
         if len(roi) == 0:
@@ -57,5 +60,5 @@ class ImageUtility:
                 y = 0
 
         w, h = ImageUtility.IMG_SIZE, ImageUtility.IMG_SIZE
-        image_arr = np.array(image, 'uint8')
+        image_arr = img_to_array(image)
         return image_arr[y:y + h, x:x + w]

@@ -1,13 +1,15 @@
-import pickle
 import threading
+from operator import itemgetter
 
 import cv2
-from bson import Binary
+import numpy as np
+from keras_preprocessing.image import img_to_array
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.python.keras.models import load_model
 
 from an_connector import ANConnector
 from assets.messages import Messages
 from database_connector import DatabaseConnector
-from trainer import Trainer
 from utils.average_utility import AverageUtility
 from utils.benchmark_utility import BenchmarkUtility
 from utils.image_utility import ImageUtility
@@ -58,18 +60,16 @@ class InputHandler:
             self.activate_frame_rescaling()
 
     def start(self):
-        recognizer = cv2.face.LBPHFaceRecognizer_create()
-        recognizer.read(Trainer.DATA_FILE)
+        print('Loading model for detection ... ')
+        prototxt_path = 'deploy.prototxt'
+        weights_path = 'res.caffemodel'
+        facenet = cv2.dnn.readNet(prototxt_path, weights_path)
+        net = load_model('mask_detector.model')
 
         # Param may need to be changed, depending on your video input
         capture = cv2.VideoCapture(2)
 
         print(Messages.INPUT_HANDLER_START)
-
-        prev_pos_x = None
-        prev_pos_y = None
-        frame_offset = 75
-        frames_counter = 0
 
         success, frame = capture.read()
         self.crop_frame(frame)
@@ -81,71 +81,51 @@ class InputHandler:
 
         while success:
             frame = cv2.resize(frame, (self.frame_width, self.frame_height))
-
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            if prev_pos_x is not None and prev_pos_y is not None:
-                image = image[prev_pos_y[0] - frame_offset:prev_pos_y[1] + frame_offset,
-                        prev_pos_x[0] - frame_offset:prev_pos_x[1] + frame_offset]
+            (h, w) = frame.shape[:2]
+            blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), (104.0, 177.0, 123.0))
 
-            faces = ImageUtility.FACE_CASCADE.detectMultiScale(image, scaleFactor=ImageUtility.SCALE_FACTOR,
-                                                               minNeighbors=5)
+            facenet.setInput(blob)
+            detections = facenet.forward()
 
-            if faces == ():
-                frames_counter += 1
+            faces = []
+            locs = []
+            preds = []
 
-                if self.benchmark_mode_activated:
-                    benchmark_utility.measure(False, False)
+            for i in range(0, detections.shape[2]):
+                confidence = detections[0, 0, i, 2]
 
-                if frames_counter >= 10:
-                    frames_counter = 0
-                    prev_pos_x = None
-                    prev_pos_y = None
+                if confidence > 0:
+                    box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+                    (startX, startY, endX, endY) = box.astype('int')
 
-            for (x, y, w, h) in faces:
-                roi = image[y:y + h, x:x + w]
+                    (startX, startY) = (max(0, startX), max(0, startY))
+                    (endX, endY) = (min(w - 1, endX), min(h - 1, endY))
 
-                if prev_pos_x is not None and prev_pos_y is not None:
-                    x += prev_pos_x[0] - frame_offset
-                    y += prev_pos_y[0] - frame_offset
+                    face = image[startY:endY, startX:endX]
 
-                if self.frame_rescaling_activated:
-                    prev_pos_x = (x, x + w)
-                    prev_pos_y = (y, y + h)
+                    if face.size != 0:
+                        face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+                        face = cv2.resize(face, (224, 224))
+                        face = img_to_array(face)
+                        face = preprocess_input(face)
 
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+                        faces.append(face)
+                        locs.append((startX, startY, endX, endY))
 
-                id_, conf = recognizer.predict(roi)
-                p_id = an_connector.persons[id_].id
+            if len(faces) > 0:
+                faces = np.array(faces, dtype='float32')
+                preds = net.predict(faces, batch_size=32)
 
-                if self.benchmark_mode_activated:
-                    average_utility.add(an_connector.persons[id_], conf)
-                    benchmark_utility.measure(True, conf <= 10)
+            for (box, pred) in zip(locs, preds):
+                (startX, startY, endX, endY) = box
+                confs = zip(an_connector.persons, pred)
+                label = max(confs, key=itemgetter(1))[0].surname
+                print(label)
 
-                if conf <= 10:
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    text_width = cv2.getTextSize(p_id, font, 1, 2)[0][0]
-                    offset = int((w - text_width) / 2)
-
-                    cv2.putText(frame, p_id, (x + offset, y - 10), font, 1, (255, 255, 255), 1, cv2.LINE_AA)
-
-                    if id_ != self.last_predict:
-                        print(Messages.INPUT_HANDLER_IDENTIFICATION.format(p_id))
-                        self.last_predict = id_
-
-                        if an_connector.persons[id_].present:
-                            ANConnector.set_absent(p_id)
-                        else:
-                            ANConnector.set_present(p_id)
-
-                elif an_connector.last_interacting_person is not None:
-                    print(Messages.INPUT_HANDLER_SAMPLE_DATA.format(p_id))
-
-                    binary = Binary(pickle.dumps(roi, protocol=2), subtype=128)
-                    database_connector.insert(
-                        {'guid': an_connector.last_interacting_person.objectGUID, 'data': binary})
-
-                    an_connector.last_interacting_person = None
+                # cv2.putText(frame, label, (startX, startY - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 2)
+                # cv2.rectangle(frame, (startX, startY), (endX, endY), (0, 0, 255), 2)
 
             cv2.imshow('FR-Extension', frame)
             success, frame = capture.read()
